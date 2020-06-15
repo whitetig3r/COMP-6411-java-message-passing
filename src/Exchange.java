@@ -5,18 +5,49 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class Exchange {
-    private static HashMap<String, ArrayList<String>> directory = new HashMap<>();
-    public static HashMap<String, LinkedBlockingQueue> queueDirectory = new HashMap<>();
-    public static LinkedBlockingQueue mainQueue = new LinkedBlockingQueue();
+    private static final HashMap<String, ArrayList<String>> directory = new HashMap<>();
+    public static HashMap<String, LinkedBlockingQueue<String[]>> queueDirectory = new HashMap<>();
+    public static LinkedBlockingQueue<String> mainQueue = new LinkedBlockingQueue<>();
 
     public static void main(String[] args) {
-        System.out.println("** Calls to be made **");
         readFileIntoStructure();
-        System.out.println();
+        threadedFunctionalityExecutor();
+    }
+
+    private static void threadedFunctionalityExecutor() {
+        /*
+            spawn friend threads and execute their run
+            methods
+        */
+
+        ExecutorService threadPool = spawnThreadsAndExecute();
+
+        /*
+            receive messages from friend threads
+            shutdown main thread on timeout
+        */
+
+        receiveMessages();
+        threadPool.shutdown();
+    }
+
+    private static ExecutorService spawnThreadsAndExecute() {
         ExecutorService threadPool = Executors.newFixedThreadPool(directory.size());
+        int threadIndex = 0;
+        boolean isLastThread = false;
+        // a placeholder shared resource for all friend threads
+        Object lock = new Object();
+
         for(Map.Entry<String, ArrayList<String>> tuple : directory.entrySet()){
-            threadPool.execute(new Person(tuple.getKey(), tuple.getValue()));
+            if(threadIndex == directory.size() - 1) isLastThread = true;
+            threadPool.execute(new Person(tuple.getKey(), tuple.getValue(), isLastThread, lock));
+            threadIndex++;
         }
+
+        return threadPool;
+    }
+
+    private static void receiveMessages() {
         long lastReceived = System.currentTimeMillis();
         while(System.currentTimeMillis() - lastReceived <= 10000) {
             if(mainQueue.size() > 0){
@@ -29,10 +60,10 @@ public class Exchange {
             }
         }
         System.out.println("Master has received no replies for 10 seconds, ending...");
-        threadPool.shutdown();
     }
 
     private static void readFileIntoStructure() {
+        System.out.println("** Calls to be made **");
         File file=new File("calls.txt");
         try(FileReader reader = new FileReader(file)) {
             BufferedReader bReader = new BufferedReader(reader);
@@ -44,6 +75,7 @@ public class Exchange {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        System.out.println();
     }
 
     private static void processLine(String line) {
@@ -54,7 +86,7 @@ public class Exchange {
         String keyForDirectory = keyValList[0].trim();
         keyForDirectory = keyForDirectory.substring(0, keyForDirectory.length() - 1);
 
-        queueDirectory.put(keyForDirectory, new LinkedBlockingQueue());
+        queueDirectory.put(keyForDirectory, new LinkedBlockingQueue<>());
 
         System.out.printf("%s: [%s\n", keyForDirectory,stringifiedVals);
 
