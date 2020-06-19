@@ -1,19 +1,20 @@
 import java.util.ArrayList;
+import java.util.Random;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class Person extends Thread {
     private final ArrayList<String> callees;
     private final LinkedBlockingQueue<String[]> callerQueue;
     private final String caller;
-    private final boolean isLastThread;
-    private final Object lock;
+    private static final Random random = new Random();
+    private final CountDownLatch latch;
 
-    public Person(String caller, ArrayList<String> callees, boolean isLastThread, Object lock) {
+    public Person(String caller, ArrayList<String> callees, CountDownLatch latch) {
         this.callees = callees;
         this.callerQueue = Exchange.queueDirectory.get(caller);
         this.caller = caller;
-        this.isLastThread = isLastThread;
-        this.lock = lock;
+        this.latch = latch;
     }
 
     @Override
@@ -27,7 +28,7 @@ public class Person extends Thread {
             execution ie. sending and receiving
         */
 
-        waitIUntilAllThreadsSpawned();
+        waitUntilAllThreadsSpawned();
 
         /*
             sends intro messages to all contacts in list
@@ -41,6 +42,15 @@ public class Person extends Thread {
         */
 
         receiveMessages();
+    }
+
+    private void waitUntilAllThreadsSpawned() {
+        latch.countDown();
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     private void receiveMessages() {
@@ -77,7 +87,7 @@ public class Person extends Thread {
     }
 
     private void randomizedSleep() throws InterruptedException {
-        Thread.sleep(Exchange.randomSleepTimes.pop());
+        Thread.sleep(random.nextInt(100));
     }
 
     private void sendIntroMessages() {
@@ -89,21 +99,6 @@ public class Person extends Thread {
                 e.printStackTrace();
             }
         });
-    }
-
-    private void waitIUntilAllThreadsSpawned() {
-        synchronized (lock) {
-            if (!isLastThread) {
-                try {
-                    lock.wait();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-            else {
-                lock.notifyAll();
-            }
-        }
     }
 
 }

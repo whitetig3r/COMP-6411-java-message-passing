@@ -1,15 +1,11 @@
 import java.io.*;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.*;
 
 public class Exchange {
     private static final HashMap<String, ArrayList<String>> directory = new HashMap<>();
     public static HashMap<String, LinkedBlockingQueue<String[]>> queueDirectory = new HashMap<>();
     public static LinkedBlockingQueue<String> mainQueue = new LinkedBlockingQueue<>();
-    public static Stack<Integer> randomSleepTimes = new Stack<>();
 
     public static void main(String[] args) {
         readFileIntoStructure();
@@ -17,8 +13,6 @@ public class Exchange {
     }
 
     private static void threadedFunctionalityExecutor() {
-
-        createDistinctRandomSleepTimeStack();
         /*
             spawn friend threads and execute their run
             methods
@@ -35,27 +29,13 @@ public class Exchange {
         threadPool.shutdown();
     }
 
-    private static void createDistinctRandomSleepTimeStack() {
-        int randValuesToSeed = directory.values().stream().map(ArrayList::size)
-                .reduce(Integer::sum).orElse(0);
-
-        ThreadLocalRandom.current().ints(0, 100)
-                .distinct().limit(randValuesToSeed*2).forEach(randVal -> {
-                randomSleepTimes.push(randVal);
-        });
-    }
-
     private static ExecutorService spawnThreadsAndExecute() {
         ExecutorService threadPool = Executors.newFixedThreadPool(directory.size());
-        int threadIndex = 0;
-        boolean isLastThread = false;
-        // a placeholder shared resource for all friend threads
-        Object lock = new Object();
+
+        CountDownLatch latch = new CountDownLatch(directory.size());
 
         for(Map.Entry<String, ArrayList<String>> tuple : directory.entrySet()){
-            if(threadIndex == directory.size() - 1) isLastThread = true;
-            threadPool.execute(new Person(tuple.getKey(), tuple.getValue(), isLastThread, lock));
-            threadIndex++;
+            threadPool.execute(new Person(tuple.getKey(), tuple.getValue(), latch));
         }
 
         return threadPool;
@@ -86,6 +66,9 @@ public class Exchange {
             {
                 processLine(line);
             }
+        } catch(FileNotFoundException e) {
+            System.out.println("Please ensure that both source files and 'calls.txt' are in the same directory");
+            System.exit(-1);
         } catch (IOException e) {
             e.printStackTrace();
         }
