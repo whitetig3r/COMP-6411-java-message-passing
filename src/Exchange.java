@@ -3,11 +3,13 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class Exchange {
     private static final HashMap<String, ArrayList<String>> directory = new HashMap<>();
     public static HashMap<String, LinkedBlockingQueue<String[]>> queueDirectory = new HashMap<>();
     public static LinkedBlockingQueue<String> mainQueue = new LinkedBlockingQueue<>();
+    public static Stack<Integer> randomSleepTimes = new Stack<>();
 
     public static void main(String[] args) {
         readFileIntoStructure();
@@ -15,6 +17,8 @@ public class Exchange {
     }
 
     private static void threadedFunctionalityExecutor() {
+
+        createDistinctRandomSleepTimeStack();
         /*
             spawn friend threads and execute their run
             methods
@@ -29,6 +33,16 @@ public class Exchange {
 
         receiveMessages();
         threadPool.shutdown();
+    }
+
+    private static void createDistinctRandomSleepTimeStack() {
+        int randValuesToSeed = directory.values().stream().map(ArrayList::size)
+                .reduce(Integer::sum).orElse(0);
+
+        ThreadLocalRandom.current().ints(0, 100)
+                .distinct().limit(randValuesToSeed*2).forEach(randVal -> {
+                randomSleepTimes.push(randVal);
+        });
     }
 
     private static ExecutorService spawnThreadsAndExecute() {
@@ -48,12 +62,12 @@ public class Exchange {
     }
 
     private static void receiveMessages() {
-        long lastReceived = System.currentTimeMillis();
-        while(System.currentTimeMillis() - lastReceived <= 10000) {
+        long lastReceived = System.nanoTime();
+        while(System.nanoTime() - lastReceived <= 1e10) {
             if(mainQueue.size() > 0){
                 try {
                     System.out.println(mainQueue.take());
-                    lastReceived = System.currentTimeMillis();
+                    lastReceived = System.nanoTime();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }

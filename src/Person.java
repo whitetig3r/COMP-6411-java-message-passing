@@ -1,12 +1,10 @@
 import java.util.ArrayList;
-import java.util.Random;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class Person extends Thread {
     private final ArrayList<String> callees;
     private final LinkedBlockingQueue<String[]> callerQueue;
     private final String caller;
-    private final Random random = new Random();
     private final boolean isLastThread;
     private final Object lock;
 
@@ -46,24 +44,26 @@ public class Person extends Thread {
     }
 
     private void receiveMessages() {
-        long lastReceived = System.currentTimeMillis();
+        long lastReceived = System.nanoTime();
 
-        while(((System.currentTimeMillis() - lastReceived) <= 5000)) {
+        while(((System.nanoTime() - lastReceived) <= 5e9)) {
             if (callerQueue.size() > 0) {
-                lastReceived = System.currentTimeMillis();
+                lastReceived = System.nanoTime();
                 try {
                     String[] messageReceived;
                     messageReceived = callerQueue.take();
                     if (messageReceived[1].equals("intro")) {
                         randomizedSleep();
                         Exchange.queueDirectory.get(messageReceived[0])
-                                .put(new String[]{caller, "reply"});
+                                .put(new String[]{caller, "reply", String.valueOf(lastReceived)});
                     }
                     Exchange.mainQueue.put(
                             String.format(
                                     "%s received %s message from %s (%s)",
                                     caller, messageReceived[1],
-                                    messageReceived[0], lastReceived
+                                    messageReceived[0],
+                                    (messageReceived.length == 3 ?
+                                    messageReceived[2] : lastReceived)
                             )
                     );
                 } catch (InterruptedException e) {
@@ -77,7 +77,7 @@ public class Person extends Thread {
     }
 
     private void randomizedSleep() throws InterruptedException {
-        Thread.sleep(random.nextInt(100));
+        Thread.sleep(Exchange.randomSleepTimes.pop());
     }
 
     private void sendIntroMessages() {
