@@ -25,7 +25,11 @@ public class Exchange {
             shutdown main thread on timeout
         */
 
-        receiveMessages();
+        try {
+            receiveMessages();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         threadPool.shutdown();
     }
 
@@ -41,17 +45,10 @@ public class Exchange {
         return threadPool;
     }
 
-    private static void receiveMessages() {
-        long lastReceived = System.nanoTime();
-        while(System.nanoTime() - lastReceived <= 1e10) {
-            if(mainQueue.size() > 0){
-                try {
-                    System.out.println(mainQueue.take());
-                    lastReceived = System.nanoTime();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
+    private static void receiveMessages() throws InterruptedException {
+        String messageReceived;
+        while((messageReceived = mainQueue.poll(10, TimeUnit.SECONDS)) != null) {
+            System.out.println(messageReceived);
         }
         System.out.println("Master has received no replies for 10 seconds, ending...");
     }
