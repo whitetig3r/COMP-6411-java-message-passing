@@ -13,7 +13,7 @@ public class Person extends Thread {
 
     public Person(String caller, ArrayList<String> callees, CountDownLatch latch) {
         this.callees = callees;
-        this.callerQueue = Exchange.queueDirectory.get(caller);
+        this.callerQueue = exchange.queueDirectory.get(caller);
         this.caller = caller;
         this.latch = latch;
     }
@@ -65,10 +65,10 @@ public class Person extends Thread {
             long lastReceived = System.nanoTime();
             if (messageReceived[1].equals("intro")) {
                 randomizedSleep();
-                Exchange.queueDirectory.get(messageReceived[0])
+                exchange.queueDirectory.get(messageReceived[0])
                         .put(new String[]{caller, "reply", String.valueOf(lastReceived)});
             }
-            Exchange.mainQueue.put(
+            exchange.mainQueue.put(
                     String.format(
                             "%s received %s message from %s (%s)",
                             caller, messageReceived[1],
@@ -79,7 +79,7 @@ public class Person extends Thread {
             );
         }
 
-        System.out.printf("Process %s has received no calls for 5 seconds, ending...\n", caller);
+        System.out.printf("\nProcess %s has received no calls for 5 seconds, ending...\n", caller);
     }
 
     private void randomizedSleep() throws InterruptedException {
@@ -90,7 +90,7 @@ public class Person extends Thread {
         callees.forEach(callee -> {
             try {
                 randomizedSleep();
-                Exchange.queueDirectory.get(callee).put(new String[]{caller, "intro"});
+                exchange.queueDirectory.get(callee).put(new String[]{caller, "intro"});
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

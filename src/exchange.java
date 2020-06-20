@@ -2,7 +2,7 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
 
-public class Exchange {
+public class exchange {
     private static final HashMap<String, ArrayList<String>> directory = new HashMap<>();
     public static HashMap<String, LinkedBlockingQueue<String[]>> queueDirectory = new HashMap<>();
     public static LinkedBlockingQueue<String> mainQueue = new LinkedBlockingQueue<>();
@@ -50,7 +50,7 @@ public class Exchange {
         while((messageReceived = mainQueue.poll(10, TimeUnit.SECONDS)) != null) {
             System.out.println(messageReceived);
         }
-        System.out.println("Master has received no replies for 10 seconds, ending...");
+        System.out.print("\nMaster has received no replies for 10 seconds, ending...");
     }
 
     private static void readFileIntoStructure() {
